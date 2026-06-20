@@ -1,0 +1,23 @@
+# Terraform
+infra/.terraform/
+infra/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.auto.tfvars
+backend.hcl
+crash.log
+*.tfplan
+
+# Secrets / keys
+*.pem
+*_rsa
+*_ed25519
+id_*
+!*.example
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

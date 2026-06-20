@@ -1,0 +1,82 @@
+#cloud-config
+# Hyperlight demo bootstrap for Ubuntu 22.04 (Intel D4s_v5 / KVM).
+# Installs toolchain, verifies KVM, builds + runs a Hyperlight micro-VM demo,
+# and writes evidence to /var/log/hyperlight-demo.log and /home/azureuser/demo-output.txt.
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - build-essential
+  - clang
+  - lld
+  - pkg-config
+  - libssl-dev
+  - cpu-checker
+  - cmake
+  - git
+  - curl
+  - jq
+
+write_files:
+  - path: /usr/local/bin/hyperlight-demo.sh
+    permissions: "0755"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      # Runs as the azureuser via cloud-init runcmd. Idempotent-ish.
+      set -uo pipefail
+      LOG=/var/log/hyperlight-demo.log
+      OUT=/home/azureuser/demo-output.txt
+      exec > >(tee -a "$LOG") 2>&1
+      echo "================ Hyperlight demo bootstrap $(date -u) ================"
+
+      USER_HOME=/home/azureuser
+      export HOME=$USER_HOME
+      export CARGO_HOME=$USER_HOME/.cargo
+      export RUSTUP_HOME=$USER_HOME/.rustup
+      export PATH=$CARGO_HOME/bin:/usr/lib/llvm-18/bin:$PATH
+
+      echo "## STEP 0: KVM make-or-break check"
+      ls -l /dev/kvm || echo "WARNING: /dev/kvm missing"
+      kvm-ok || echo "WARNING: kvm-ok reports KVM not usable"
+      # ensure azureuser can use kvm
+      usermod -aG kvm azureuser || true
+
+      echo "## STEP 1: LLVM-18 (for guest builds)"
+      if ! command -v clang-18 >/dev/null 2>&1; then
+        curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+        chmod +x /tmp/llvm.sh
+        /tmp/llvm.sh 18 || echo "llvm.sh exited non-zero (continuing)"
+      fi
+
+      echo "## STEP 2: Rust toolchain (rustup, stable) as azureuser"
+      if [ ! -x "$CARGO_HOME/bin/cargo" ]; then
+        sudo -u azureuser -H bash -lc 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable'
+      fi
+      sudo -u azureuser -H bash -lc 'source $HOME/.cargo/env; rustc --version; cargo --version'
+
+      echo "## STEP 3: install cargo-hyperlight"
+      sudo -u azureuser -H bash -lc 'source $HOME/.cargo/env; export PATH=/usr/lib/llvm-18/bin:$PATH; cargo install --locked cargo-hyperlight' || echo "cargo-hyperlight install non-zero"
+
+      echo "## STEP 4: scaffold + build + run the demo micro-VM"
+      sudo -u azureuser -H bash -lc '
+        source $HOME/.cargo/env
+        export PATH=/usr/lib/llvm-18/bin:$HOME/.cargo/bin:$PATH
+        cd $HOME
+        rm -rf hl-demo
+        cargo hyperlight new hl-demo
+        cd hl-demo/guest && cargo hyperlight build
+        cd ../host
+        echo "--- timing: cargo run (release) ---"
+        /usr/bin/time -v cargo run --release 2>&1
+      ' | tee "$OUT"
+
+      chown azureuser:azureuser "$OUT" || true
+      echo "DEMO_BOOTSTRAP_COMPLETE $(date -u)" | tee -a "$OUT"
+      echo "================ done ================"
+
+runcmd:
+  - [ bash, -lc, "/usr/local/bin/hyperlight-demo.sh || true" ]
+
+final_message: "Hyperlight demo bootstrap finished after $UPTIME seconds. See /var/log/hyperlight-demo.log and ~/demo-output.txt"
