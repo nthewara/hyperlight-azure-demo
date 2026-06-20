@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "australiaeast" },
+    "vmSize": { "value": "Standard_D4s_v5" },
+    "adminUsername": { "value": "azureuser" },
+    "sshSourceCidr": { "value": "REPLACE_WITH_YOUR_IP/32" },
+    "sshPublicKey": { "value": "ssh-ed25519 AAAA... REPLACE_WITH_YOUR_PUBKEY" }
+  }
+}

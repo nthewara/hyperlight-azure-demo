@@ -2,7 +2,7 @@
 
 An Azure VM lab that demos **[Microsoft Hyperlight](https://github.com/hyperlight-dev/hyperlight)** — a lightweight VMM that runs untrusted code inside **OS-free, hardware-isolated micro-VMs** that start in milliseconds, with guest function calls completing in microseconds.
 
-This repo provisions an Intel **D4s_v5** VM (nested virtualization → KVM), installs the Rust toolchain + `cargo-hyperlight`, and runs a guest function **inside a micro-VM** to prove it works end-to-end.
+This repo provisions an Intel **D4s_v5** VM (nested virtualization → KVM) via **Bicep**, installs the Rust toolchain + builds Hyperlight from the upstream repo, and runs a guest function **inside a micro-VM** to prove it works end-to-end. It also builds **[Nanvix](https://github.com/nanvix/nanvix)** (a Microsoft Research microkernel co-designed with Hyperlight) and runs a program inside a Nanvix micro-VM guest.
 
 > Status: see the [tracking issue](https://github.com/nthewara/hyperlight-azure-demo/issues/1) for live progress. Deployed values (RG / public IP / captured demo output) are filled in once the lab is up.
 
@@ -23,21 +23,27 @@ You ──SSH(22)──► Azure VM (D4s_v5, Ubuntu 22.04)
 - Public IP (Standard, static); **NSG allows inbound TCP 22** locked to your IP `/32`
 - Tags: `purpose=hyperlight-demo`, `owner=nirmal`, `lab=true`, `inbound-access=ssh-22-open-by-design`
 
-## Deploy
+## Deploy (Bicep)
 
 ### Prereqs
 - `az login` into subscription `b9d87a00-…-cfd7a9d745d2`
-- Terraform ≥ 1.5, an SSH keypair, your public IP (`curl https://api.ipify.org`)
+- Azure CLI with Bicep, an SSH keypair, your public IP (`curl https://api.ipify.org`)
 
 ### Steps
 ```bash
-cd infra
-terraform init -backend-config=~/workspace/tfvars/backend.hcl
-terraform apply -var-file=~/workspace/tfvars/hyperlight.tfvars
+cd infra-bicep
+./deploy.sh <YOUR_IP>/32 ~/.ssh/id_ed25519.pub
 ```
-`terraform output` prints the public IP and ready-to-paste `ssh` command.
+or manually:
+```bash
+az deployment sub create \
+  --name hyperlight-$(date +%s) --location australiaeast \
+  --template-file main.bicep \
+  --parameters sshSourceCidr="<YOUR_IP>/32" sshPublicKey="$(cat ~/.ssh/id_ed25519.pub)"
+```
+The deployment outputs print the public IP and ready-to-paste `ssh` command.
 
-Real tfvars live outside git (`~/workspace/tfvars/hyperlight.tfvars`); only `terraform.tfvars.example` is committed.
+Real parameter values are passed on the command line (not committed); only `main.parameters.example.json` is in git.
 
 ## Run the demo (live)
 cloud-init runs the demo automatically on first boot. To show it live yourself:
