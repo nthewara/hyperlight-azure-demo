@@ -1,0 +1,73 @@
+#cloud-config
+# Hyperlight + Nanvix demo bootstrap for Ubuntu 22.04 (Intel D4s_v5 / KVM).
+# Uses the UPSTREAM-TESTED build flow (the cargo-hyperlight scaffolder v0.1.11 is
+# currently broken), and builds Nanvix microkernel guests via nanvix's own `z` build.
+# Evidence: /var/log/hyperlight-demo.log + ~/hyperlight-evidence.txt + ~/nanvix-evidence.txt
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - build-essential
+  - clang
+  - lld
+  - pkg-config
+  - libssl-dev
+  - cpu-checker
+  - cmake
+  - git
+  - curl
+  - jq
+
+write_files:
+  - path: /usr/local/bin/hyperlight-demo.sh
+    permissions: "0755"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      set -uo pipefail
+      LOG=/var/log/hyperlight-demo.log
+      exec > >(tee -a "$LOG") 2>&1
+      echo "================ Hyperlight+Nanvix bootstrap $(date -u) ================"
+
+      U=azureuser
+      H=/home/$U
+      run() { sudo -u "$U" -H bash -lc "source \$HOME/.cargo/env 2>/dev/null; export PATH=/usr/lib/llvm-18/bin:\$HOME/.cargo/bin:\$PATH; $*"; }
+
+      echo "## STEP 0: KVM make-or-break check"
+      ls -l /dev/kvm || echo "WARNING: /dev/kvm missing"
+      kvm-ok || echo "WARNING: kvm-ok reports KVM not usable"
+      usermod -aG kvm "$U" || true
+
+      echo "## STEP 1: LLVM-18 (guest builds)"
+      if ! command -v clang-18 >/dev/null 2>&1; then
+        curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh && chmod +x /tmp/llvm.sh && /tmp/llvm.sh 18 || true
+      fi
+
+      echo "## STEP 2: Rust via rustup (repo pins its own toolchain via rust-toolchain.toml)"
+      if [ ! -x "$H/.cargo/bin/cargo" ]; then
+        sudo -u "$U" -H bash -lc 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+      fi
+      run 'cargo install just || true'
+
+      echo "## STEP 3: HYPERLIGHT — clone upstream, build guests, run hello-world micro-VM"
+      run 'cd $HOME; rm -rf hyperlight; git clone --depth 1 https://github.com/hyperlight-dev/hyperlight'
+      run 'cd $HOME/hyperlight && just rg'
+      run 'cd $HOME/hyperlight && /usr/bin/time -v cargo run --example hello-world' 2>&1 | tee "$H/hyperlight-evidence.txt"
+      chown "$U:$U" "$H/hyperlight-evidence.txt" || true
+
+      echo "## STEP 4: NANVIX — microkernel guest inside Hyperlight micro-VM"
+      run 'cd $HOME; rm -rf nanvix; git clone --depth 1 https://github.com/nanvix/nanvix.git'
+      run 'cd $HOME/nanvix && ./z setup'
+      run 'cd $HOME/nanvix && ./z build -- all'
+      # Run a Rust no_std app inside the Nanvix microkernel on the micro-VM
+      run 'cd $HOME/nanvix && ./bin/nanvixd.elf -console-file /dev/stdout -- ./bin/hello-rust-nostd.elf' 2>&1 | tee "$H/nanvix-evidence.txt"
+      chown "$U:$U" "$H/nanvix-evidence.txt" || true
+
+      echo "DEMO_BOOTSTRAP_COMPLETE $(date -u)"
+      echo "================ done ================"
+
+runcmd:
+  - [ bash, -lc, "/usr/local/bin/hyperlight-demo.sh || true" ]
+
+final_message: "Hyperlight+Nanvix bootstrap finished after $UPTIME s. See /var/log/hyperlight-demo.log, ~/hyperlight-evidence.txt, ~/nanvix-evidence.txt"

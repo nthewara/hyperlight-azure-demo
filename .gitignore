@@ -1,4 +1,4 @@
-# Terraform
+# Terraform (legacy — replaced by Bicep)
 infra/.terraform/
 infra/.terraform.lock.hcl
 *.tfstate
@@ -8,6 +8,11 @@ terraform.tfvars
 backend.hcl
 crash.log
 *.tfplan
+
+# Bicep generated ARM JSON
+infra-bicep/main.json
+infra-bicep/lab.json
+main.parameters.json
 
 # Secrets / keys
 *.pem
