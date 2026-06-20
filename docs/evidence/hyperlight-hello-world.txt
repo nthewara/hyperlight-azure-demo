@@ -1,4 +1,4 @@
-# Hyperlight hello-world — captured on Azure VM hl-932f0-vm (D4s_v5, KVM)
+# Hyperlight hello-world — captured on Azure VM hl-<suffix>-vm (D4s_v5, KVM)
 # Date: 2026-06-20  Region: australiaeast
 # Command: cargo run --example hello-world
 
@@ -13,4 +13,4 @@ INFO: /dev/kvm exists
 KVM acceleration can be used
 
 ## rustc: rustc 1.94.1 (e408947bf 2026-03-25)
-## host: Linux hlvm932f0 6.8.0-1059-azure #65~22.04.1-Ubuntu SMP Thu May 28 16:59:19 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+## host: Linux hlvm-<suffix> 6.8.0-1059-azure #65~22.04.1-Ubuntu SMP Thu May 28 16:59:19 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux

@@ -1,6 +1,6 @@
 # Proving it's a *real* micro-VM (not a container or process)
 
-Use these during the demo to show the audience this is genuine **hardware-level virtualization**, not a sandbox/namespace trick. Run on the VM: `ssh azureuser@20.92.74.191`.
+Use these during the demo to show the audience this is genuine **hardware-level virtualization**, not a sandbox/namespace trick. Run on the VM: `ssh azureuser@<PUBLIC_IP>` (the deploy outputs print this).
 
 ---
 

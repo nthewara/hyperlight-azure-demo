@@ -28,12 +28,13 @@ You ──SSH(22)──► Azure VM (D4s_v5, Ubuntu 22.04)
 ## Deploy (Bicep)
 
 ### Prereqs
-- `az login` into subscription `b9d87a00-…-cfd7a9d745d2`
+- `az login` and select your target subscription (`az account set --subscription <SUB_ID>`)
 - Azure CLI with Bicep, an SSH keypair, your public IP (`curl https://api.ipify.org`)
 
 ### Steps
 ```bash
 cd infra-bicep
+# optionally: export AZURE_SUBSCRIPTION_ID=<your-sub-id>
 ./deploy.sh <YOUR_IP>/32 ~/.ssh/id_ed25519.pub
 ```
 or manually:
@@ -80,7 +81,12 @@ az group delete -n <RG> --yes --no-wait
 ```
 
 ## ⚠️ Connectivity gotcha
-Microsoft **corp network IPs (167.220.x.x) cannot reach Azure VM public IPs.** This lab locks SSH to a home IP, so public-IP SSH works. If you're on corp net and it times out, use **Azure Bastion** or **Tailscale** instead (the NSG rule and routing would need adjusting).
+This lab locks inbound SSH (TCP 22) to a single `/32` — the IP you pass at deploy time. If you connect from a **different network** than the one you allow-listed (corporate networks, VPNs, and some carrier-grade NATs are common culprits), the SSH attempt will simply time out.
+
+Fixes:
+- Re-run the deploy with your current public IP (`curl https://api.ipify.org`), or update the NSG rule's source prefix, **or**
+- Front the VM with **Azure Bastion** (browser/CLI SSH, no public-IP exposure), **or**
+- Put the VM on an overlay like **Tailscale / WireGuard** and SSH over the private address.
 
 ---
 _Attribution: Nirmal Thewarathanthri (GitHub: [nthewara](https://github.com/nthewara))._

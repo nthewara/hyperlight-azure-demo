@@ -1,4 +1,4 @@
-# Nanvix microkernel on Hyperlight micro-VM — captured on Azure VM hl-932f0-vm
+# Nanvix microkernel on Hyperlight micro-VM — captured on Azure VM hl-<suffix>-vm
 # Date: 2026-06-20  Region: australiaeast
 # Command: ./bin/nanvixd.elf -console-file /dev/stdout -- ./bin/hello-rust-nostd.elf
 

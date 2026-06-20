@@ -5,12 +5,15 @@ set -euo pipefail
 
 CIDR="${1:?Usage: ./deploy.sh <ssh-source-cidr> [pubkey-file]}"
 PUBKEY_FILE="${2:-$HOME/.ssh/id_ed25519.pub}"
-LOCATION="australiaeast"
-SUB="b9d87a00-a4d8-47d9-84a2-cfd7a9d745d2"
+LOCATION="${LOCATION:-australiaeast}"
+# Set the target subscription via env var or pre-select it with `az account set`.
+SUB="${AZURE_SUBSCRIPTION_ID:-}"
 
 PUBKEY="$(cat "$PUBKEY_FILE")"
 
-az account set --subscription "$SUB"
+if [[ -n "$SUB" ]]; then
+  az account set --subscription "$SUB"
+fi
 
 az deployment sub create \
   --name "hyperlight-$(date +%s)" \
