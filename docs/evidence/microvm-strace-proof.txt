@@ -1,0 +1,42 @@
+Warning: Permanently added '20.92.74.191' (ED25519) to the list of known hosts.
+### Hyperlight micro-VM = real KVM VM — strace proof (Azure VM hl-932f0-vm)
+### date: Sat Jun 20 04:35:59 UTC 2026  host: hlvm932f0
+### command: strace -f -e openat,ioctl ./target/debug/examples/hello-world
+
+## Program output (ran inside the micro-VM):
+Hello, World! I am executing inside of a VM :)
+
+## Opened the KVM hypervisor interface:
+45969 openat(AT_FDCWD, "/dev/kvm", O_RDWR|O_CLOEXEC) = 3
+45969 openat(AT_FDCWD, "/dev/kvm", O_RDWR|O_CLOEXEC) = 3
+
+## KVM ioctls that build + run the micro-VM (in order):
+45969 ioctl(3, KVM_GET_API_VERSION, 0)  = 12
+45969 ioctl(3, KVM_CREATE_VM, 0)        = 4
+45969 ioctl(4, KVM_CREATE_VCPU, 0)      = 5
+45969 ioctl(5, KVM_SET_CPUID2, {nent=50, entries=[...]}) = 0
+45969 ioctl(5, KVM_SET_SREGS, {cs={base=0, limit=0, selector=0, type=11, present=1, dpl=0, db=0, s=1, l=1, g=0, avl=0}, ...}) = 0
+45969 ioctl(4, KVM_SET_USER_MEMORY_REGION, {slot=0, flags=KVM_MEM_READONLY, guest_phys_addr=0x1000, memory_size=5156864, userspace_addr=0x76a3bb134000}) = 0
+45969 ioctl(4, KVM_SET_USER_MEMORY_REGION, {slot=1, flags=0, guest_phys_addr=0xffffb8000, memory_size=294912, userspace_addr=0x76a3bc37d000}) = 0
+45969 ioctl(5, KVM_SET_REGS, {rax=0, ..., rsp=0xffffffffffffefc8, rbp=0, ..., rip=0x5f900, rflags=0x2}) = 0
+45969 ioctl(5, KVM_RUN, 0)              = 0
+45969 ioctl(5, KVM_SET_REGS, {rax=0, ..., rsp=0xffffff0000000000, rbp=0, ..., rip=0x690dc, rflags=0x2}) = 0
+45969 ioctl(5, KVM_RUN, 0)              = 0
+45969 ioctl(5, KVM_RUN, 0)              = 0
+
+## ioctl tally:
+      3 KVM_RUN
+      2 KVM_SET_USER_MEMORY_REGION
+      2 KVM_SET_REGS
+      1 KVM_SET_SREGS
+      1 KVM_SET_FPU
+      1 KVM_SET_CPUID
+      1 KVM_MEM_READONLY
+      1 KVM_GET_VCPU_MMAP_SIZE
+      1 KVM_GET_SUPPORTED_CPUID
+      1 KVM_GET_REGS
+      1 KVM_GET_API_VERSION
+      1 KVM_CREATE_VM
+      1 KVM_CREATE_VCPU
+      1 KVM_CHECK_EXTENSION
+      1 KVM_CAP_USER_MEMORY
